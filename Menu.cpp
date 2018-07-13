@@ -87,8 +87,6 @@ void UpdateMenu()
 														//unless you want the menu not to have Virtools Dev main menu color scheme.
 }
 
-//bool clone_script(CKParameter* source_script,CKParameter* dest_script);
-//bool clone_behavior(CKBehavior* src,CKBehavior* dest,CKBehavior* destpar);
 bool dump_script(CKParameter* script);
 bool dump_behavior(CKBehavior* src,Json::Value* dest,Json::Value* destpar);
 bool CKParameter2Json(CKParameter* p,Json::Value &v);
@@ -106,17 +104,11 @@ void PluginMenuCallback(int commandID)
 			ParamEditDlg shitdialog(ctx);
 			shitdialog.SetTitle("Pick the shit you want to materialize");
 			CKParameter* srcshit=(CKParameter*)ctx->CreateObject(CKCID_PARAMETER,"source shit");
-			//CKParameter* destshit=(CKParameter*)ctx->CreateObject(CKCID_PARAMETER,"dest shit");
 			srcshit->SetGUID(CKPGUID_SCRIPT);
-			//destshit->SetGUID(CKPGUID_SCRIPT);
 			shitdialog.SetParameter(srcshit);
 			shitdialog.DoModal();
-			//shitdialog.SetParameter(destshit);
-			//shitdialog.DoModal();
-			//clone_script(srcshit,destshit);
 			dump_script(srcshit);
 			ctx->DestroyObject(srcshit);
-			//ctx->DestroyObject(destshit);
 		}
 		break;
 		case 1:
@@ -239,18 +231,6 @@ void modify_bb_guid()
 	ctx->DestroyObject(g2);
 }
 
-//static CKBeObject *destowner=NULL;
-
-/*bool clone_script(CKParameter* source_script,CKParameter* dest_script)
-{
-	CKContext* ctx=source_script->GetCKContext();
-	CKBehavior* src=(CKBehavior*)source_script->GetValueObject();
-	CKBehavior* dest=(CKBehavior*)dest_script->GetValueObject();
-	if(!src||!dest)return false;
-	destowner=NULL;
-	clone_behavior(src,dest,NULL);
-	return false;
-}*/
 bool dump_script(CKParameter* script)
 {
 	Json::Value ret;
@@ -447,94 +427,6 @@ bool dump_behavior(CKBehavior* src,Json::Value* dest,Json::Value* destpar)
 	}
 	return true;
 }
-
-//typedef std::map<CKBehaviorIO*,std::pair<CKBehavior*,int>> shitmap;
-
-/*bool clone_behavior(CKBehavior* src,CKBehavior* dest,CKBehavior* destpar)
-//This is still incomplete (does not clone any parameters), yet it refuses to work.
-{
-	printdumb("type: %s, sub count: %d, proto: %s\n",beht2str(src->GetType()),
-		src->GetSubBehaviorCount(),
-		src->GetPrototypeName()?src->GetPrototypeName():"null"
-	);
-	//copy properties src -> dest
-	shitmap sm;
-	if(src->GetType()==CKBEHAVIORTYPE_BASE)
-	{
-		dest->InitFromPrototype(src->GetPrototype());
-		dest->InitFctPtrFromPrototype(src->GetPrototype());
-	}
-	else dest->SetType(src->GetType());
-	dest->SetFlags(src->GetFlags());
-	dest->SetPriority(src->GetPriority());
-	dest->SetVersion(src->GetVersion());
-	//if(dest->GetOwner())destowner=dest->GetOwner();
-	//else if(destowner)destowner->AddScript(dest);else printdumb("fuck\n");
-	if(src->GetType()==CKBEHAVIORTYPE_BEHAVIOR)
-	{
-		for(int i=0;i<src->GetOutputCount();++i)
-		{
-			dest->AddOutput(src->GetOutput(i)->GetName());
-			sm[src->GetOutput(i)]=std::make_pair(dest,-i-1);
-		}
-		for(int i=0;i<src->GetInputCount();++i)
-		{
-			dest->AddInput(src->GetInput(i)->GetName());
-			sm[src->GetInput(i)]=std::make_pair(dest,i);
-		}
-		//also do this for parameters
-	}
-	if(src->GetType()==CKBEHAVIORTYPE_SCRIPT)
-	{
-		sm[src->GetInput(0)]=std::make_pair(dest,0);
-	}
-	if(destpar){CKERROR r=destpar->AddSubBehavior(dest);if(r!=CK_OK)printdumb("add sub behavior failed: %d - %s\n",r,CKErrorToString(r));}
-	printdumb("src fnc: %p, dest fnc: %p\n",src->GetFunction(),dest->GetFunction());
-	printdumb("src owner: %s, dest owner: %s\n",rienabranler(src->GetOwner(),GetName),rienabranler(dest->GetOwner(),GetName));
-	printdumb("src target: %s, dest target: %s\n",rienabranler(src->GetTarget(),GetName),rienabranler(dest->GetTarget(),GetName));
-	printdumb("src ver: %x, dest ver: %x\n",src->GetVersion(),dest->GetVersion());
-	printdumb("src root: %s, dest root: %s\n",rienabranler(src->GetOwnerScript(),GetName),rienabranler(dest->GetOwnerScript(),GetName));
-	printdumb("==============================================\n");
-	int c=src->GetSubBehaviorCount();
-	for(int i=0;i<c;++i)
-	{
-		CKBehavior* cur=src->GetSubBehavior(i);
-		//create dest for current shit
-		CKBehavior* curdest=(CKBehavior*)src->GetCKContext()->CreateObject(CKCID_BEHAVIOR,cur->GetName());
-		int ic=cur->GetInputCount(),oc=cur->GetOutputCount();
-		for(int j=0;j<ic;++j)
-		sm[cur->GetInput(j)]=std::make_pair(curdest,j);
-		for(int j=0;j<oc;++j)
-		sm[cur->GetOutput(j)]=std::make_pair(curdest,-j-1);
-		clone_behavior(cur,curdest,dest);
-	}
-	c=src->GetSubBehaviorLinkCount();
-	for(int i=0;i<c;++i)
-	{
-		CKBehaviorLink* cur=src->GetSubBehaviorLink(i);
-		CKBehaviorLink* dst=(CKBehaviorLink*)src->GetCKContext()->CreateObject(CKCID_BEHAVIORLINK,"");
-		dst->SetInitialActivationDelay(cur->GetInitialActivationDelay());
-		dst->SetActivationDelay(cur->GetActivationDelay());
-		if(sm.find(cur->GetInBehaviorIO())==sm.end()||sm.find(cur->GetOutBehaviorIO())==sm.end())
-		{
-			printdumb("fuck shit! at least one of these behavior io is not found in the map:"
-			" %s:%s %s:%s\n",cur->GetInBehaviorIO()->GetOwner()->GetName(),cur->GetInBehaviorIO()->GetName(),
-			cur->GetOutBehaviorIO()->GetOwner()->GetName(),cur->GetOutBehaviorIO()->GetName());
-			continue;
-		}
-		dst->SetInBehaviorIO(
-			sm[cur->GetInBehaviorIO()].second<0?
-			sm[cur->GetInBehaviorIO()].first->GetOutput(-sm[cur->GetInBehaviorIO()].second-1):
-			sm[cur->GetInBehaviorIO()].first->GetInput(sm[cur->GetInBehaviorIO()].second)
-		);
-		dst->SetOutBehaviorIO(
-			sm[cur->GetOutBehaviorIO()].second<0?
-			sm[cur->GetOutBehaviorIO()].first->GetOutput(-sm[cur->GetOutBehaviorIO()].second-1):
-			sm[cur->GetOutBehaviorIO()].first->GetInput(sm[cur->GetOutBehaviorIO()].second)
-		);
-	}
-	return true;
-}*/
 
 bool CKParameter2Json(CKParameter* p,Json::Value &v)
 {
